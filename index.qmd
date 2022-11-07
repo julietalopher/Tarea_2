@@ -1,29 +1,390 @@
 ---
-title: "Tarea_2"
+title: "Tarea 2: Breve análisis de datos Covid en Costa Rica"
 author: "Julieta Lopez"
-format: html
+lang: es
+format: 
+  html:
+    toc: true
+    toc-title: Contenido
 editor: visual
 ---
-# Tarea 2 del curso de R
-Prueba de compilación
+## Introducción
 
-## Quarto
+El siguiente documento presenta un breve análisis de datos Covid en Costa Rica usando los datos proporcionados por el Ministerio de Salud que se encuentran disponibles en  [https://oges.ministeriodesalud.go.cr/](https://oges.ministeriodesalud.go.cr/).
 
-Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
+Para fines de este análisis se utilizaron los datos correspondientes a la base [datos general](https://oges.ministeriodesalud.go.cr/archivos_covid/2022_05_30/05_30_22_EXCEL_GENERAL.xlsx) y [los casos positivos](https://oges.ministeriodesalud.go.cr/archivos_covid/2022_05_30/05_30_22_CSV_POSITIVOS.csv) por día al 30 de mayo 2022 y el lenguaje de programación R.
 
-## Running Code
+## Librerias a utilizar
 
-When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
+Para este trabajo se utilizaran las librerías de `tidiverse` que incluye los paquetes de `ggplot2` y `reader` y `DT`para el manejo de datos y generación de gráficos y tablas, así como el paquete de `plotly` para la visualización de gráficos interactivos y `scales` como ayuda para dar formato a los ejes de los gráficos de sin utilizar un teme en específico..
 
-```{r}
-1 + 1
-```
-
-You can add options to executable code like this
+La instalación de los paquetes se realiza a través de la función `install.packages()`.
 
 ```{r}
-#| echo: false
-2 * 2
+#| label: instalacion-de-paquetes
+#| eval: false
+
+# Instalación de tidyverse con todos sus paquetes
+install.packages("tidyverse")
+
+# Instalación de plotly
+install.packages("plotly")
+
+# Instalación de DT
+install.packages("DT")
+
+# Instalación de scales
+install.packages("scales")
+
 ```
 
-The `echo: false` option disables the printing of code (only output is displayed).
+Después de la instalación, se cargan los paquetes con la función de `library()`.
+
+```{r}
+#| label: carga-de-librerias
+#| message: false
+
+library(tidyverse) #Carga de tidyverse (incluye ggplot3 y readr)
+library(plotly) # Carga de plotly
+library(DT) # Carga de DT
+library(dplyr) # Carga de dplyr
+library(scales) # Carga de scales
+
+```
+
+## Datos
+
+### Ingreso de datos y selección de columnas
+
+Se cargan en un dataframe de R con la función de `read.delim()` de la librería `readr`, el argumento de `col_select` permite para cargar únicamente las columnas a utilizar en el análisis de datos.
+
+```{r}
+#| label: carga-datos-covid
+#| echo: true
+#| include: true
+#| message: false
+#| warning: false
+
+# Carga del archivo CSV de entrada en un dataframe
+
+# Datos generales
+covid_general <-
+  read_delim(
+    file = "datos/05_30_22_CSV_GENERAL.csv", #Selección de archivo a utilizar
+    col_select = c("FECHA", # Selección de columnas a utilizar
+            "hom_posi",
+            "muj_posi",
+            "menor_posi",
+            "adul_posi",
+            "am_posi",
+            "nue_posi"))
+
+# Datos positivos por cantón
+covid_cantonal_positivos <-
+  read_delim(
+    file = "datos/05_30_22_CSV_POSITIVOS.csv",
+    locale = locale(encoding = "WINDOWS-1252"), #Para poder visualizar las tildes.
+    col_select = c("provincia",
+                   "canton",
+                   "30/05/2022"))
+
+```
+
+### Cambio de nombre de columnas
+
+Para renombrar las columnas del dataframe y facilitar su manejo se usa la función de `rename()` de `dplyr`.
+
+```{r}
+#| label: cambio-nombre-columnas
+
+# Cambio de nombre de columnas
+covid_general <-
+  covid_general |>
+  rename( fecha = FECHA,
+          hombres_positivos = hom_posi,
+          mujeres_positivas = muj_posi,
+          menores_positivos = menor_posi,
+          adultos_positivos = adul_posi,
+          mayores_positivos = am_posi,
+          nuevos_positivos = nue_posi)
+
+#Cambio de nombre de columnas cantones
+
+covid_cantonal_positivos <-
+  covid_cantonal_positivos |>
+  rename( positivos = '30/05/2022')
+
+```
+
+### Cambio de tipo de datos
+
+Se utiliza la función de `mutate()` del paquete `dplyr` que permite modificar columnas en un dataframe. La función `as.Date()` pertenece al paquete base de R y convierte los datos a _date_.
+
+```{r}
+#| label: conversion-fecha-columnas
+
+# Cambio de tipo de datos de la columna fecha, de str a date
+covid_general <-
+  covid_general |>
+  mutate(fecha = as.Date(fecha, format = "%d/%m/%Y"))
+
+```
+### Depuración de datos nulos 
+
+La función de `filter()` del paquete `dplyr` recupera las filas del dataframe que cumplen con una condición, en este caso aquellas que no contengan valores nulos _NA_ o pertenezcan al cantón _Otros_. 
+
+```{r}
+#| label: depuracion-datos-nulos
+
+# Depuración de filas con valor NA y "Otros" en cantón
+covid_cantonal_positivos <-
+  covid_cantonal_positivos |>
+   filter(!is.na(canton) & canton != "Otros") 
+    #selecciona valores diferentes a NA y "Otros"
+
+```
+
+## 1. Datos diarios de covid por sexo y edad
+
+Para la visualización de la tabla de datos se utiliza `datatable()` la función principal del paquete `DT`.
+
+```{r}
+#| label: tabla-datos-generales
+
+# Tabla de datos de covid-general
+
+covid_general |>
+  datatable(options = list(
+    pageLength = 5,
+    language = list(url = '//cdn.datatables.net/plug-ins/1.10.11/i18n/Spanish.json')), 
+    colnames = c('ID',
+                  'Fecha',
+                  'Hombres', 
+                  'Mujeres', 
+                  'Menores', 
+                  'Adultos', 
+                  'Adultos Mayores', 
+                  'Nuevos Casos'), # Cambia los nombres de las columnas únicamente para la visualización en la tabla y no en la base de datos original 
+    caption = "Tabla 1. Nuevos casos positivos por sexo y grupo de edad") # Agrega subtitulo a la tabla
+
+```
+## 2. Casos positivos nuevos al día
+
+La librería de `ggplot2` permite la generación de una variedad de gráficos. Para este caso, se utiliza la función de `geom_col()` de donde se obtiene un gráfico de barras que permite la visualización de las olas de contagios durante el periodo de estudio.
+
+Los gráficos de barras pueden generarse también con la función de `geom_bar()` que además permite presentar alguna transformación estadística con el argumento de `stat`.
+
+```{r}
+#| label: barras-nuevos-positivos-dia
+#| echo: true
+#| include: true
+#| warning: false
+
+# Gráfico de barras para nuevos casos al  día
+barras_nuevos <-
+  covid_general |>
+    ggplot(aes(x = fecha, y = nuevos_positivos)) + 
+    geom_col(aes(text = paste0( # se especifican los datos que se muestran al pasar el cursor en el gráfico de plotly
+      "Día: ",
+      fecha,
+      "\n",
+      "Número de nuevos casos positivos: ",
+      nuevos_positivos))) +
+    labs(x = "Fecha",
+         y = "Casos positivos",
+         title = 'Nuevos casos positivos por día en Costa Rica',
+         subtitle = 'Del 06 de marzo del 2020 al 30 de mayo del 2022') + # Nombres de ejes
+    theme(axis.text.x = element_text(size = 6, angle = 90, vjust = 0.2, hjust=1)) + # Ajuste de dirección y tamaño de etiquetas en eje x
+    scale_x_date(limits = as.Date(c('2020-03-06','2022-05-30')), # Límites del eje x
+                 date_breaks = "1 month", # Breaks o división de marcas del eje x
+                 date_labels = "%b %Y") # Estilo de etiquetas del eje x
+
+# Generación de gráfico con plotly
+
+ ggplotly(barras_nuevos, tooltip = "text") |> 
+   config(locale = 'es') |>
+  layout(title = list(text = paste0('Nuevos casos positivos por día en Costa Rica', #Agrega titulo al plot
+                                    '<br>', # Nueva linea en formato HTML
+                                    '<sup>', # Estilo de nueva linea, más pequeña que el titulo original. <sup> es una función de HTML que otorga este estilo
+                                    'Del 06 de marzo del 2020 al 30 de mayo del 2022',
+                                    '</sup>')))
+ 
+
+```
+## Evolución en el tiempo de los casos positivos
+
+Una buena representación de acumulados en una serie de tiempo es a través de gráficos de linea, para lo que usamos la función `geom_line()` de `ggplot2`. Se pueden añadir varias series a un mismo gráfico concatenando las funciones necesarias de `geom_line()`.
+
+### 3. Acumulados por sexo
+
+```{r}
+#| label: evolucion-casos-sexo
+#| echo: true
+#| include: true
+#| warning: false
+
+# Gráfico de líneas con la evolución de los casos de COVID
+lineas_sexo <-
+  covid_general |>
+  ggplot(aes(x = fecha, y = value, color = variable)) +
+  geom_line(aes(y = hombres_positivos, color = "Hombres")) +
+  geom_line(aes(y = mujeres_positivas, color = "Mujeres")) +
+  scale_color_manual("",
+                     values = c(
+                       "Hombres" = "black",
+                       "Mujeres" = "grey50")
+                    ) +
+  labs(x = "Fecha",
+       y = "Casos positivos",
+       title = "Evolución de casos positivos por sexo") + # Nombres de ejes
+  scale_x_date(limits = as.Date(c('2020-03-06','2022-05-30')), # Límites del eje x
+                 date_breaks = "4 month", # Breaks o división de marcas del eje x
+                 date_labels = "%b %Y") + 
+  scale_y_continuous(labels = comma) # Usa el paquete scales para evitar notación científica en eje x
+
+# Generación de gráfico con plotly
+
+ ggplotly(lineas_sexo) |> 
+   config(locale = 'es') |>
+  layout(title = list(text = paste0("Evolución de casos positivos por sexo", #Agrega titulo al plot
+                                    '<br>', # Nueva linea en formato HTML
+                                    '<sup>', # Estilo de nueva linea, más pequeña que el titulo original. <sup> es una función de HTML que otorga este estilo
+                                    'Del 06 de marzo del 2020 al 30 de mayo del 2022',
+                                    '</sup>')))
+
+```
+
+### 4. Acumulados por grupo de edad
+
+```{r}
+#| label: evolucion-casos-edad
+#| echo: true
+#| include: true
+#| warning: false
+
+# Gráfico de líneas con la evolución de los casos de COVID
+lineas_edad <-
+  covid_general |>
+  ggplot(aes(x = fecha, y = value, color = variable)) +
+  geom_line(aes(y = menores_positivos, color = "Menores")) +
+  geom_line(aes(y = adultos_positivos, color = "Adultos")) +
+  geom_line(aes(y = mayores_positivos, color = "Adultos \nMayores")) +
+  scale_color_manual( # colores
+    "",
+    values = c(
+      "Menores" = "grey80",
+      "Adultos" = "grey50",
+      "Adultos \nMayores" = "black"
+    )
+  ) +
+  labs(x = "Fecha",
+       y = "Casos positivos",
+       title = "Evolución de casos positivos por grupo de edad") + # Nombres de ejes
+  scale_x_date(limits = as.Date(c('2020-03-06','2022-05-30')), # Límites del eje x
+                 date_breaks = "4 month", # Breaks o división de marcas del eje x
+                 date_labels = "%b %Y") + 
+  scale_y_continuous(labels = comma) # Usa el paquete scales para evitar notación científica en eje x
+
+# Generación de gráfico con plotly
+
+ ggplotly(lineas_edad) |> 
+   config(locale = 'es') |>
+  layout(title = list(text = paste0("Evolución de casos positivos por grupo de edad", #Agrega titulo al plot
+                                    '<br>', # Nueva linea en formato HTML
+                                    '<sup>', # Estilo de nueva linea, más pequeña que el titulo original. <sup> es una función de HTML que otorga este estilo
+                                    'Del 06 de marzo del 2020 al 30 de mayo del 2022',
+                                    '</sup>')))
+
+```
+
+## 5. Datos positivos por cantones
+
+```{r}
+#| label: tabla-datos-canton
+
+# Tabla de datos por cantón
+
+covid_cantonal_positivos |>
+  datatable(options = list(
+    pageLength = 5,
+    language = list(url = '//cdn.datatables.net/plug-ins/1.10.11/i18n/Spanish.json')), 
+    colnames = c('ID',
+                  'Provincia', 
+                  'Cantón', 
+                  'Casos positivos'), # Cambia los nombres de las columnas únicamente para la visualización en la tabla y no en la base de datos original 
+    caption = "Tabla 2. Casos positivos al 30/05/2022 por cantón y provincia") # Agrega subtitulo a la tabla)
+
+```
+## 6. Distribución de casos positivos en cantones
+
+En el siguiente histograma se muestra la distribución de casos positivos en cantones. Para este gráfico se utiliza la función de `geom_histogram()` y en este caso particular se utilizó el argumento de `breaks` para definir la cantidad de _bins_ que tendrá el histograma. A diferencia del argumento `bins`, `breaks` permite que cada bin se presente en el eje x como parte de un rango de valores. Por ejemplo: Hay 16 cantones con casos positivos en un rango de 10000 a 20000.
+
+```{r}
+#| label: histograma-distribucion-en-cantones
+#| echo: true
+#| include: true
+#| warning: false
+
+# Histograma de distribución de casos en cantones
+
+histograma_cantones <-
+  covid_cantonal_positivos |>
+  ggplot(aes(x = positivos)) +
+  geom_histogram(breaks = seq(0,80000,10000)) +
+  labs(x = "Casos positivos",
+       y = "Número de cantones",
+       title = "Distribución de casos positivos en cantones") + # Nombres de ejes
+  scale_x_continuous(breaks = seq(0,80000,10000)) + 
+  scale_y_continuous(breaks = seq(0,55,5))
+
+# # Histograma plotly
+ ggplotly(histograma_cantones) |>
+   config(locale = 'es') |>
+  layout(title = list(text = paste0("Distribución de casos positivos en cantones", #Agrega titulo al plot
+                                    '<br>', # Nueva linea en formato HTML
+                                    '<sup>', # Estilo de nueva linea, más pequeña que el titulo original. <sup> es una función de HTML que otorga este estilo
+                                    'Casos acumulados del 06 de marzo del 2020 al 30 de mayo del 2022',
+                                    '</sup>')))
+
+```
+### Casos positivos en cantones
+
+Para visualizar la cantidad de casos acumulados en cantón, se utilizó la función de `geom_col()`. Para este gráfico se utilizó la función de `reorder()` del paquete `stats`, uno de los paquetes base R.
+
+```{r}
+#| label: barras-distribucion-por-cantones
+#| echo: true
+#| include: true
+#| warning: false
+
+# Numero de casos positivos en cada cantón
+
+barras_cantones <-
+  covid_cantonal_positivos |>
+  ggplot(aes(reorder(canton, -positivos), y = positivos)) + #ordenar datos por cantón en orden descendente de datos positivos
+  geom_col(aes(text = paste0( # se especifican los datos que se muestran al pasar el ratón
+      "Cantón: ",
+      canton,
+      "\n",
+      "Datos totales de covid: ",
+      positivos
+    )), width = 0.5, 
+    position = position_dodge(0.7)
+    ) + 
+  ggtitle("Distribución de casos por catón") +
+  xlab("Casos positivos") +
+  ylab("Frecuencia") +
+  theme(axis.text.x = element_text(size = 6, angle = 90, vjust = 0.2, hjust=1)) # Ajuste de dirección y tamaño de etiquetas en eje x
+
+# # Histograma plotly
+ggplotly(barras_cantones, tooltip = "text") |>
+   config(locale = 'es') |>
+  layout(title = list(text = paste0("Distribución de casos positivos por cantones", #Agrega titulo al plot
+                                    '<br>', # Nueva linea en formato HTML
+                                    '<sup>', # Estilo de nueva linea, más pequeña que el titulo original. <sup> es una función de HTML que otorga este estilo
+                                    'Casos acumulados del 06 de marzo del 2020 al 30 de mayo del 2022',
+                                    '</sup>')))
+
+```
+
+
