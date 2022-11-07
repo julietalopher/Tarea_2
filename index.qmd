@@ -6,12 +6,13 @@ format:
   html:
     toc: true
     toc-title: Contenido
-    toc-depth: 3
+    toc-depth: 4
 editor: visual
 ---
+
 ## Introducción
 
-El siguiente documento presenta un breve análisis de datos Covid en Costa Rica usando los datos proporcionados por el Ministerio de Salud que se encuentran disponibles en  [https://oges.ministeriodesalud.go.cr/](https://oges.ministeriodesalud.go.cr/).
+El siguiente documento presenta un breve análisis de datos Covid en Costa Rica usando los datos proporcionados por el Ministerio de Salud que se encuentran disponibles en <https://oges.ministeriodesalud.go.cr/>.
 
 Para fines de este análisis se utilizaron los datos correspondientes a la base [datos general](https://oges.ministeriodesalud.go.cr/archivos_covid/2022_05_30/05_30_22_EXCEL_GENERAL.xlsx) y [los casos positivos](https://oges.ministeriodesalud.go.cr/archivos_covid/2022_05_30/05_30_22_CSV_POSITIVOS.csv) por día al 30 de mayo 2022 y el lenguaje de programación R.
 
@@ -119,7 +120,7 @@ covid_cantonal_positivos <-
 
 #### Cambio de tipo de datos
 
-Se utiliza la función de `mutate()` del paquete `dplyr` que permite modificar columnas en un dataframe. La función `as.Date()` pertenece al paquete base de R y convierte los datos a _date_.
+Se utiliza la función de `mutate()` del paquete `dplyr` que permite modificar columnas en un dataframe. La función `as.Date()` pertenece al paquete base de R y convierte los datos a *date*.
 
 ```{r}
 #| label: conversion-fecha-columnas
@@ -130,9 +131,10 @@ covid_general <-
   mutate(fecha = as.Date(fecha, format = "%d/%m/%Y"))
 
 ```
-### Depuración de datos nulos 
 
-La función de `filter()` del paquete `dplyr` recupera las filas del dataframe que cumplen con una condición, en este caso aquellas que no contengan valores nulos _NA_ o pertenezcan al cantón _Otros_. 
+### Depuración de datos nulos
+
+La función de `filter()` del paquete `dplyr` recupera las filas del dataframe que cumplen con una condición, en este caso aquellas que no contengan valores nulos *NA* o pertenezcan al cantón *Otros*.
 
 ```{r}
 #| label: depuracion-datos-nulos
@@ -169,6 +171,7 @@ covid_general |>
     caption = "Tabla 1. Nuevos casos positivos por sexo y grupo de edad") # Agrega subtitulo a la tabla
 
 ```
+
 ## 2. Casos positivos nuevos al día
 
 La librería de `ggplot2` permite la generación de una variedad de gráficos. Para este caso, se utiliza la función de `geom_col()` de donde se obtiene un gráfico de barras que permite la visualización de las olas de contagios durante el periodo de estudio.
@@ -212,6 +215,7 @@ barras_nuevos <-
  
 
 ```
+
 ## Evolución en el tiempo de los casos positivos
 
 Una buena representación de acumulados en una serie de tiempo es a través de gráficos de linea, para lo que usamos la función `geom_line()` de `ggplot2`. Se pueden añadir varias series a un mismo gráfico concatenando las funciones necesarias de `geom_line()`.
@@ -316,9 +320,10 @@ covid_cantonal_positivos |>
     caption = "Tabla 2. Casos positivos al 30/05/2022 por cantón y provincia") # Agrega subtitulo a la tabla)
 
 ```
+
 ## 6. Distribución de casos positivos en cantones
 
-En el siguiente histograma se muestra la distribución de casos positivos en cantones. Para este gráfico se utiliza la función de `geom_histogram()` y en este caso particular se utilizó el argumento de `breaks` para definir la cantidad de _bins_ que tendrá el histograma. A diferencia del argumento `bins`, `breaks` permite que cada bin se presente en el eje x como parte de un rango de valores. Por ejemplo: Hay 16 cantones con casos positivos en un rango de 10000 a 20000.
+En el siguiente histograma se muestra la distribución de casos positivos en cantones. Para este gráfico se utiliza la función de `geom_histogram()` y en este caso particular se utilizó el argumento de `breaks` para definir la cantidad de *bins* que tendrá el histograma. A diferencia del argumento `bins`, `breaks` permite que cada bin se presente en el eje x como parte de un rango de valores. Por ejemplo: Hay 16 cantones con casos positivos en un rango de 10000 a 20000.
 
 ```{r}
 #| label: histograma-distribucion-en-cantones
@@ -348,7 +353,8 @@ histograma_cantones <-
                                     '</sup>')))
 
 ```
-### Casos positivos en cantones
+
+### Casos positivos por cantones
 
 Para visualizar la cantidad de casos acumulados en cantón, se utilizó la función de `geom_col()`. Para este gráfico se utilizó la función de `reorder()` del paquete `stats`, uno de los paquetes base R.
 
@@ -387,5 +393,3 @@ ggplotly(barras_cantones, tooltip = "text") |>
                                     '</sup>')))
 
 ```
-
-
