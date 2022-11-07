@@ -6,6 +6,7 @@ format:
   html:
     toc: true
     toc-title: Contenido
+    toc-depth: 3
 editor: visual
 ---
 ## Introducción
@@ -54,7 +55,7 @@ library(scales) # Carga de scales
 
 ## Datos
 
-### Ingreso de datos y selección de columnas
+#### Ingreso de datos y selección de columnas
 
 Se cargan en un dataframe de R con la función de `read.delim()` de la librería `readr`, el argumento de `col_select` permite para cargar únicamente las columnas a utilizar en el análisis de datos.
 
@@ -90,7 +91,7 @@ covid_cantonal_positivos <-
 
 ```
 
-### Cambio de nombre de columnas
+#### Cambio de nombre de columnas
 
 Para renombrar las columnas del dataframe y facilitar su manejo se usa la función de `rename()` del paquete `dplyr`.
 
@@ -116,7 +117,7 @@ covid_cantonal_positivos <-
 
 ```
 
-### Cambio de tipo de datos
+#### Cambio de tipo de datos
 
 Se utiliza la función de `mutate()` del paquete `dplyr` que permite modificar columnas en un dataframe. La función `as.Date()` pertenece al paquete base de R y convierte los datos a _date_.
 
