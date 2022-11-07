@@ -92,7 +92,7 @@ covid_cantonal_positivos <-
 
 ### Cambio de nombre de columnas
 
-Para renombrar las columnas del dataframe y facilitar su manejo se usa la función de `rename()` de `dplyr`.
+Para renombrar las columnas del dataframe y facilitar su manejo se usa la función de `rename()` del paquete `dplyr`.
 
 ```{r}
 #| label: cambio-nombre-columnas
@@ -380,8 +380,8 @@ barras_cantones <-
 ggplotly(barras_cantones, tooltip = "text") |>
    config(locale = 'es') |>
   layout(title = list(text = paste0("Distribución de casos positivos por cantones", #Agrega titulo al plot
-                                    '<br>', # Nueva linea en formato HTML
-                                    '<sup>', # Estilo de nueva linea, más pequeña que el titulo original. <sup> es una función de HTML que otorga este estilo
+                                    '<br>',
+                                    '<sup>', 
                                     'Casos acumulados del 06 de marzo del 2020 al 30 de mayo del 2022',
                                     '</sup>')))
 
